@@ -1,0 +1,95 @@
+--selecting database
+use database PROJECT_DATABASE;
+--selecting schema
+use schema MY_SCHEMA;
+select current_role(), current_database(), current_schema();
+--creating table bankloan
+create or replace table bankloan(
+    ID	integer,
+    year number,
+    loan_limit varchar,
+    Gender varchar,
+    approv_in_adv varchar,
+    loan_purpose varchar,
+    Credit_Worthiness varchar,
+    open_credit	varchar,
+    business_or_commercial varchar,
+    loan_amount number,
+    rate_of_interest float,
+    Interest_rate_spread float,
+    Upfront_charges float,
+    term number,
+    Neg_ammortization varchar,
+    interest_only varchar,
+    lump_sum_payment varchar,
+    property_value number,
+    Secured_by varchar,
+    total_units varchar,
+    income number,
+    credit_type varchar,
+    Credit_Score varchar,
+    co_applicant_credit_type varchar,
+    age varchar,
+    LTV float,
+    Region varchar,
+    Security_Type varchar,
+    Status number,
+    dtir1 number
+)
+
+--selecting the table
+select * from bankloan;
+
+-- creating stream 
+create or replace stream  
+bank_stream on table bankloan
+append_only=true;
+
+--Create a scheduler
+create or replace task bank_task
+    warehouse = MY_PROJECT
+    schedule  = '5 minute'
+  when
+    system$stream_has_data('bank_stream')
+  as
+    insert into bankloan select * from bank_stream;
+  
+  
+--creating task
+ select * from table(information_schema.task_history())
+order by scheduled_time;   
+    
+ 
+
+
+//select * from PROJECT_DATABASE.MY_SCHEMA.bankloanbackup;
+
+
+--Calculate the total loan amount for gender = female; and loan_limit=;cf&#39;
+select sum(loan_amount) from bankloan
+where gender='Female' and loan_limit='cf';
+
+
+
+//select  /*sum(loan_amount)/1677273500*100,*/
+//((select sum(loan amount) from bankloan )/ sum(loan_amount)*100)- sum(loan_amount)*100 
+//from bankloan
+//group by gender;
+//
+select sum(loan_amount)/1677273500*100as"differnece" from bankloan
+group by gender;
+
+--What is the difference in percentage of approve in advance between business and commercial loan
+select count(approv_in_adv)as "total count",
+((select count(approv_in_adv) from bankloan where approv_in_adv !='pre')-
+(select count(approv_in_adv) from bankloan where approv_in_adv='pre'))/ count(approv_in_adv)*100 as "diff"  from bankloan
+
+--Is there any lumpsum pay for business loan?
+select age,sum(Credit_Score
+)/count(Credit_Score) as "average" from bankloan
+group by age;
+
+--average credit score for various age group
+
+select lump_sum_payment from bankloan
+where business_or_commercial='b/c' and lump_sum_payment='lpsm';
